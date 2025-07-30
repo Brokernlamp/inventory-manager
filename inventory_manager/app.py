@@ -1,12 +1,21 @@
+# app.py
+import streamlit as st
+from db_config import get_connection
 
-import os
-from dotenv import load_dotenv
+st.title("📦 Inventory Viewer")
 
-# Load environment variables from .env file
-load_dotenv()
+conn = get_connection()
 
-from main import app
+if conn:
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM products;")
+    rows = cur.fetchall()
 
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    if rows:
+        st.write("### Product List:")
+        for row in rows:
+            st.json(row)
+    else:
+        st.info("No products found.")
+else:
+    st.error("❌ Failed to connect to the database.")
