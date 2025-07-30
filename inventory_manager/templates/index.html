@@ -1,0 +1,47 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="jumbotron bg-primary text-white p-5 rounded mb-4">
+    <h1 class="display-4">Welcome to Inventory Management System</h1>
+    <p class="lead">Manage your products, suppliers, and get automatic low stock alerts via WhatsApp.</p>
+    <hr class="my-4">
+    <p>Get started by managing your products and suppliers, or check your dashboard for insights.</p>
+    <a class="btn btn-light btn-lg" href="{{ url_for('dashboard') }}" role="button">
+        <i class="fas fa-tachometer-alt"></i> Go to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-box fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Manage Products</h5>
+                <p class="card-text">Add, edit, delete, and view all your products with stock levels.</p>
+                <a href="{{ url_for('products') }}" class="btn btn-primary">View Products</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-truck fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Manage Suppliers</h5>
+                <p class="card-text">Keep track of your suppliers and their contact information.</p>
+                <a href="{{ url_for('suppliers') }}" class="btn btn-success">View Suppliers</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-bell fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">Stock Alerts</h5>
+                <p class="card-text">Automatic WhatsApp alerts when stock falls below threshold.</p>
+                <a href="{{ url_for('check_stock_alerts') }}" class="btn btn-warning">Check Stock</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

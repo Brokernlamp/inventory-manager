@@ -1,0 +1,357 @@
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-tachometer-alt text-primary"></i> Dashboard</h2>
+    <div class="btn-group" role="group">
+        <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add Product
+        </a>
+        <a href="{{ url_for('add_supplier') }}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Add Supplier
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-gradient-primary text-white shadow-lg border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50 mb-1">Total Products</h6>
+                        <h2 class="mb-0 font-weight-bold">{{ total_products }}</h2>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-box fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-gradient-success text-white shadow-lg border-0" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50 mb-1">Total Suppliers</h6>
+                        <h2 class="mb-0 font-weight-bold">{{ total_suppliers }}</h2>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-truck fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-gradient-warning text-white shadow-lg border-0" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50 mb-1">Low Stock Items</h6>
+                        <h2 class="mb-0 font-weight-bold">{{ low_stock_count }}</h2>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-gradient-info text-white shadow-lg border-0" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-white-50 mb-1">Total Value</h6>
+                        <h2 class="mb-0 font-weight-bold">₹{{ "%.2f"|format(total_value) }}</h2>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-circle p-3">
+                        <i class="fas fa-rupee-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-boxes text-primary"></i> Quick Stock Management</h5>
+                    <small class="text-muted">Click +/- to adjust quantities instantly</small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="fw-bold">Product Name</th>
+                                <th class="fw-bold text-center">Current Stock</th>
+                                <th class="fw-bold text-center">Threshold</th>
+                                <th class="fw-bold text-center">Price</th>
+                                <th class="fw-bold text-center">Status</th>
+                                <th class="fw-bold text-center">Quick Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in recent_products %}
+                            <tr id="product-row-{{ product[0] }}">
+                                <td class="align-middle">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-3">
+                                            <i class="fas fa-box text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0">{{ product[1] }}</h6>
+                                            {% if product[2] %}
+                                                <small class="text-muted">{{ product[2][:50] }}{% if product[2]|length > 50 %}...{% endif %}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <span class="badge fs-6 px-3 py-2 {% if product[3] <= product[4] %}bg-danger{% else %}bg-success{% endif %}" id="stock-{{ product[0] }}">
+                                        {{ product[3] }}
+                                    </span>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <span class="badge bg-secondary fs-6 px-3 py-2">{{ product[4] }}</span>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <span class="fw-bold text-primary">₹{{ "%.2f"|format(product[5]) }}</span>
+                                </td>
+                                <td class="align-middle text-center">
+                                    {% if product[3] <= product[4] %}
+                                        <span class="badge bg-danger-soft text-danger px-3 py-2">
+                                            <i class="fas fa-exclamation-triangle me-1"></i>Low Stock
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success-soft text-success px-3 py-2">
+                                            <i class="fas fa-check-circle me-1"></i>In Stock
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="align-middle text-center">
+                                    <div class="btn-group shadow-sm" role="group">
+                                        <button class="btn btn-outline-danger btn-sm" onclick="adjustStock({{ product[0] }}, -1)" title="Decrease quantity">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                        <span class="btn btn-outline-secondary btn-sm disabled px-3" id="qty-{{ product[0] }}">{{ product[3] }}</span>
+                                        <button class="btn btn-outline-success btn-sm" onclick="adjustStock({{ product[0] }}, 1)" title="Increase quantity">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        <a href="{{ url_for('edit_product', product_id=product[0]) }}" class="btn btn-outline-primary btn-sm" title="Edit product">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="fas fa-box-open fa-3x mb-3 opacity-50"></i>
+                                        <h5>No products found</h5>
+                                        <p>Start by adding your first product to manage inventory</p>
+                                        <a href="{{ url_for('add_product') }}" class="btn btn-primary">
+                                            <i class="fas fa-plus"></i> Add Product
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0"><i class="fas fa-rocket text-primary"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-3">
+                    <a href="{{ url_for('add_product') }}" class="btn btn-primary btn-lg shadow-sm">
+                        <i class="fas fa-plus me-2"></i> Add New Product
+                    </a>
+                    <a href="{{ url_for('add_supplier') }}" class="btn btn-success btn-lg shadow-sm">
+                        <i class="fas fa-plus me-2"></i> Add New Supplier
+                    </a>
+                    <a href="{{ url_for('suppliers') }}" class="btn btn-info btn-lg shadow-sm">
+                        <i class="fas fa-edit me-2"></i> Manage Suppliers
+                    </a>
+                    <a href="{{ url_for('alerts') }}" class="btn btn-warning btn-lg shadow-sm">
+                        <i class="fas fa-exclamation-triangle me-2"></i> View Stock Alerts
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0"><i class="fas fa-info-circle text-info"></i> System Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="p-3 bg-success bg-opacity-10 rounded">
+                            <i class="fas fa-check-circle text-success fa-2x mb-2"></i>
+                            <p class="small mb-0 text-success fw-bold">WhatsApp Active</p>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3 bg-primary bg-opacity-10 rounded">
+                            <i class="fas fa-eye text-primary fa-2x mb-2"></i>
+                            <p class="small mb-0 text-primary fw-bold">Monitoring ON</p>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-3 bg-info bg-opacity-10 rounded">
+                            <i class="fas fa-database text-info fa-2x mb-2"></i>
+                            <p class="small mb-0 text-info fw-bold">SQLite DB</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if low_stock_count > 0 %}
+                <div class="alert alert-warning border-warning shadow-sm">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle text-warning fa-2x me-3"></i>
+                        <div>
+                            <h6 class="mb-1">Low Stock Alert!</h6>
+                            <small>You have {{ low_stock_count }} item(s) running low on stock.</small>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-success border-success shadow-sm">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success fa-2x me-3"></i>
+                        <div>
+                            <h6 class="mb-1">All Good!</h6>
+                            <small>All products are properly stocked.</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-success-soft {
+    background-color: rgba(25, 135, 84, 0.1) !important;
+}
+.bg-danger-soft {
+    background-color: rgba(220, 53, 69, 0.1) !important;
+}
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-2px);
+}
+.btn-group .btn {
+    transition: all 0.2s ease;
+}
+.btn-group .btn:hover {
+    transform: scale(1.05);
+}
+</style>
+
+<script>
+function adjustStock(productId, change) {
+    const stockBadge = document.getElementById(`stock-${productId}`);
+    const qtySpan = document.getElementById(`qty-${productId}`);
+    const currentStock = parseInt(stockBadge.textContent);
+    
+    // Prevent negative stock
+    if (currentStock + change < 0) {
+        showAlert('Cannot reduce stock below 0', 'warning');
+        return;
+    }
+    
+    // Show loading state
+    const originalText = stockBadge.textContent;
+    stockBadge.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    fetch('/adjust-stock', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            product_id: productId,
+            change: change
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const newStock = data.newStock;
+            const threshold = data.threshold;
+            
+            // Update stock display
+            stockBadge.textContent = newStock;
+            qtySpan.textContent = newStock;
+            
+            // Update badge color based on stock level
+            stockBadge.className = `badge fs-6 px-3 py-2 ${newStock <= threshold ? 'bg-danger' : 'bg-success'}`;
+            
+            // Show success animation
+            stockBadge.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                stockBadge.style.transform = 'scale(1)';
+            }, 200);
+            
+            showAlert(`Stock ${change > 0 ? 'increased' : 'decreased'} successfully!`, 'success');
+        } else {
+            stockBadge.textContent = originalText;
+            showAlert('Error adjusting stock: ' + data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        stockBadge.textContent = originalText;
+        console.error('Error:', error);
+        showAlert('Error adjusting stock. Please try again.', 'danger');
+    });
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.minWidth = '300px';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto dismiss after 3 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+</script>
+{% endblock %}

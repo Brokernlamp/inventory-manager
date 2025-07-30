@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Stock Alerts - Inventory Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-exclamation-triangle text-warning"></i> Stock Alerts</h2>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+{% if low_stock_items %}
+<div class="alert alert-warning">
+    <i class="fas fa-bell"></i> You have {{ low_stock_items|length }} item(s) running low on stock that need attention.
+</div>
+
+<div class="row">
+    {% for item in low_stock_items %}
+    <div class="col-md-6 mb-4">
+        <div class="card border-warning shadow-sm">
+            <div class="card-header bg-warning bg-opacity-10">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-box text-warning"></i> {{ item.product_name }}</h5>
+                    <span class="badge bg-danger">{{ item.current_stock }} / {{ item.threshold }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <small class="text-muted">Current Stock</small>
+                        <div class="h5 text-danger">{{ item.current_stock }}</div>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Threshold</small>
+                        <div class="h5">{{ item.threshold }}</div>
+                    </div>
+                </div>
+
+                {% if item.supplier_name %}
+                <div class="mb-3">
+                    <small class="text-muted">Supplier</small>
+                    <div><i class="fas fa-truck text-primary"></i> {{ item.supplier_name }}</div>
+                    <small class="text-muted">{{ item.supplier_phone }}</small>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted">Unit Price</small>
+                    <div class="h6">₹{{ "%.2f"|format(item.price) }}</div>
+                </div>
+
+                <button type="button" class="btn btn-primary btn-sm w-100"
+                                onclick="openRestockModal({{ item.product_id }}, '{{ item.product_name }}', '{{ item.supplier_name }}', {{ item.supplier_id }}, {{ item.threshold - item.current_stock + 10 }})">
+                            <i class="fas fa-paper-plane"></i> Generate WhatsApp Link
+                        </button>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> No supplier assigned. <a href="{{ url_for('edit_product', product_id=item.product_id) }}">Assign a supplier</a> to send restock orders.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div class="text-success">
+        <i class="fas fa-check-circle fa-4x mb-3"></i>
+        <h4>All Good!</h4>
+        <p class="text-muted">No low stock alerts at the moment. All products are properly stocked.</p>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-success">
+            <i class="fas fa-tachometer-alt"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Restock Order Modal -->
+<div class="modal fade" id="restockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-paper-plane"></i> Send Restock Order</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="restockForm" onsubmit="sendRestockOrder(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Product</label>
+                        <input type="text" class="form-control" id="modalProductName" readonly>
+                        <input type="hidden" id="modalProductId">
+                        <input type="hidden" id="modalSupplierId">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Supplier</label>
+                        <input type="text" class="form-control" id="modalSupplierName" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="orderQuantity" class="form-label">Order Quantity *</label>
+                        <input type="number" class="form-control" id="orderQuantity" min="1" required>
+                        <small class="form-text text-muted">Suggested quantity will be pre-filled</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="messageTemplate" class="form-label">Message Template</label>
+                        <select class="form-control" id="messageTemplate" onchange="updateMessagePreview()">
+                            <option value="urgent">Urgent Restock Request</option>
+                            <option value="standard">Standard Restock Order</option>
+                            <option value="bulk">Bulk Order Request</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Message Preview</label>
+                        <textarea class="form-control" id="messagePreview" rows="8" readonly></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Generate WhatsApp Link
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const messageTemplates = {
+    urgent: `🚨 URGENT RESTOCK NEEDED 🚨
+
+Dear {supplier_name},
+
+We urgently need to restock the following item:
+
+📦 Product: {product_name}
+📊 Required Quantity: {order_quantity} units
+⏰ Priority: HIGH
+
+Please arrange immediate delivery.
+
+Thank you for your quick response!
+
+Best regards,
+Inventory Management System`,
+
+    standard: `📋 RESTOCK ORDER REQUEST
+
+Dear {supplier_name},
+
+We would like to place an order for:
+
+📦 Product: {product_name}
+📊 Quantity: {order_quantity} units
+📅 Expected Delivery: Within 3-5 business days
+
+Please confirm availability and delivery schedule.
+
+Thank you for your partnership!
+
+Best regards,
+Inventory Management System`,
+
+    bulk: `🏢 BULK ORDER REQUEST
+
+Dear {supplier_name},
+
+We are placing a bulk order for:
+
+📦 Product: {product_name}
+📊 Quantity: {order_quantity} units
+💰 Please provide bulk pricing if available
+
+Kindly confirm:
+- Availability
+- Best pricing for this quantity
+- Delivery timeline
+
+Looking forward to your response.
+
+Best regards,
+Inventory Management System`
+};
+
+function openRestockModal(productId, productName, supplierName, supplierId, suggestedQty) {
+    document.getElementById('modalProductId').value = productId;
+    document.getElementById('modalProductName').value = productName;
+    document.getElementById('modalSupplierId').value = supplierId;
+    document.getElementById('modalSupplierName').value = supplierName;
+    document.getElementById('orderQuantity').value = suggestedQty;
+
+    updateMessagePreview();
+    new bootstrap.Modal(document.getElementById('restockModal')).show();
+}
+
+function updateMessagePreview() {
+    const template = document.getElementById('messageTemplate').value;
+    const productName = document.getElementById('modalProductName').value;
+    const supplierName = document.getElementById('modalSupplierName').value;
+    const orderQuantity = document.getElementById('orderQuantity').value || '[Quantity]';
+
+    let message = messageTemplates[template];
+    message = message.replace('{supplier_name}', supplierName);
+    message = message.replace('{product_name}', productName);
+    message = message.replace('{order_quantity}', orderQuantity);
+
+    document.getElementById('messagePreview').value = message;
+}
+
+function sendRestockOrder(event) {
+    event.preventDefault();
+
+    const productId = document.getElementById('modalProductId').value;
+    const supplierId = document.getElementById('modalSupplierId').value;
+    const quantity = document.getElementById('orderQuantity').value;
+    const message = document.getElementById('messagePreview').value;
+
+    // Send request to backend to generate WhatsApp link
+    fetch('/send-restock-order', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            product_id: productId,
+            supplier_id: supplierId,
+            quantity: quantity,
+            message: message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.whatsapp_link) {
+            // Open WhatsApp Web in new tab
+            window.open(data.whatsapp_link, '_blank');
+            showAlert('WhatsApp link generated successfully! Opening in new tab...', 'success');
+        } else {
+            showAlert('Failed to generate WhatsApp link: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Error generating WhatsApp link: ' + error.message, 'error');
+    });
+
+    bootstrap.Modal.getInstance(document.getElementById('restockModal')).hide();
+}
+
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.zIndex = '9999';
+    alertDiv.style.minWidth = '300px';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    document.body.appendChild(alertDiv);
+
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Update message preview when quantity changes
+document.getElementById('orderQuantity').addEventListener('input', updateMessagePreview);
+</script>
+{% endblock %}
